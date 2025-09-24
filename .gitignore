@@ -127,3 +127,6 @@ temp/
 *.njsproj
 *.sln
 *.sw?
+
+# infrastructure
+gcp
