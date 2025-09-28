@@ -2,6 +2,14 @@ import { Controller, Post, Get, Body, HttpException, HttpStatus, Logger } from '
 import { UrlFetcherService } from '../services/url-fetcher.service';
 import { FetchUrlsDto } from '../dto/fetch-urls.dto';
 import { FetchUrlsResponse } from '../interfaces/url-fetch-result.interface';
+import {
+    hasUrls,
+    isWithinUrlLimit,
+    hasUniqueUrls,
+    areAllUrlsValid,
+    findFirstInvalidUrlIndex,
+    findFirstDuplicateUrlIndex
+} from '../validators/url.validator';
 
 @Controller('api/fetch')
 export class UrlFetcherController {
@@ -60,14 +68,22 @@ export class UrlFetcherController {
         const createBadRequest = (message: string) =>
             new HttpException({ statusCode: HttpStatus.BAD_REQUEST, message, error: 'Bad Request' }, HttpStatus.BAD_REQUEST);
 
-        if (!urls?.length) throw createBadRequest('URLs array cannot be empty');
-        if (urls.length > 50) throw createBadRequest('Maximum 50 URLs allowed per request');
-        if (new Set(urls).size !== urls.length) throw createBadRequest('Duplicate URLs are not allowed');
+        if (!hasUrls(urls)) {
+            throw createBadRequest('URLs array cannot be empty');
+        }
 
-        urls.forEach((url, index) => {
-            try { new URL(url); } catch {
-                throw createBadRequest(`Invalid URL at index ${index}: ${url}`);
-            }
-        });
+        if (!isWithinUrlLimit(urls)) {
+            throw createBadRequest('Maximum 50 URLs allowed per request');
+        }
+
+        if (!hasUniqueUrls(urls)) {
+            const duplicateIndex = findFirstDuplicateUrlIndex(urls);
+            throw createBadRequest(`Duplicate URL found at index ${duplicateIndex}: ${urls[duplicateIndex]}`);
+        }
+
+        if (!areAllUrlsValid(urls)) {
+            const invalidIndex = findFirstInvalidUrlIndex(urls);
+            throw createBadRequest(`Invalid URL at index ${invalidIndex}: ${urls[invalidIndex]}`);
+        }
     }
 }
