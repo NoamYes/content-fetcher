@@ -1,3 +1,8 @@
+import { ConfigService } from '@nestjs/config';
+
+// Create a ConfigService instance for use in validation functions
+const configService = new ConfigService();
+
 /**
  * URL validation utility functions
  * Each function returns a boolean indicating whether the validation passes
@@ -15,10 +20,10 @@ export function hasUrls(urls: string[]): boolean {
 /**
  * Checks if the number of URLs is within the allowed limit
  * @param urls - Array of URLs to validate
- * @param maxUrls - Maximum number of URLs allowed (default: 50)
  * @returns true if the number of URLs is within the limit, false otherwise
  */
-export function isWithinUrlLimit(urls: string[], maxUrls: number = 50): boolean {
+export function isWithinUrlLimit(urls: string[]): boolean {
+    const maxUrls = configService.get<number>('MAX_URLS_PER_REQUEST', 50);
     return urls.length <= maxUrls;
 }
 

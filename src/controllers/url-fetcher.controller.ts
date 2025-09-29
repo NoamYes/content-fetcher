@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, Logger, Param, Req, HttpCode } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UrlFetcherService } from '../services/url-fetcher.service';
 import { FetchUrlsDto } from '../dto/fetch-urls.dto';
 import { FetchUrlsResponse } from '../interfaces/url-fetch-result.interface';
@@ -14,14 +15,19 @@ import {
 @Controller('api/fetch')
 export class UrlFetcherController {
     private readonly logger = new Logger(UrlFetcherController.name);
-    private lastFetchResult: FetchUrlsResponse | null = null;
+    private fetchResults: Map<string, FetchUrlsResponse> = new Map();
 
-    constructor(private readonly urlFetcherService: UrlFetcherService) { }
+    constructor(
+        private readonly urlFetcherService: UrlFetcherService,
+        private readonly configService: ConfigService
+    ) { }
 
-    @Post()
-    async fetchUrls(@Body() fetchUrlsDto: FetchUrlsDto): Promise<FetchUrlsResponse> {
+    @Post('*')
+    @HttpCode(HttpStatus.OK)
+    async fetchUrls(@Req() req: any, @Body() fetchUrlsDto: FetchUrlsDto): Promise<FetchUrlsResponse> {
         try {
-            this.logger.log(`Received request to fetch ${fetchUrlsDto.urls.length} URLs`);
+            const path = req.params[0] || '';
+            this.logger.log(`Received request to fetch ${fetchUrlsDto.urls.length} URLs at path: ${path}`);
 
             // Validate URLs
             this.validateUrls(fetchUrlsDto.urls);
@@ -29,10 +35,10 @@ export class UrlFetcherController {
             // Fetch URLs
             const result = await this.urlFetcherService.fetchUrls(fetchUrlsDto.urls);
 
-            // Store the result for GET requests
-            this.lastFetchResult = result;
+            // Store the result for GET requests using the path as key
+            this.fetchResults.set(path, result);
 
-            this.logger.log(`Successfully processed ${fetchUrlsDto.urls.length} URLs`);
+            this.logger.log(`Successfully processed ${fetchUrlsDto.urls.length} URLs and stored at path: ${path}`);
             return result;
 
         } catch (error) {
@@ -53,15 +59,18 @@ export class UrlFetcherController {
         }
     }
 
-    @Get()
-    async getLastFetchResult(): Promise<FetchUrlsResponse | { message: string }> {
-        if (!this.lastFetchResult) {
+    @Get('*')
+    async getFetchResult(@Req() req: any): Promise<FetchUrlsResponse | { message: string }> {
+        const path = req.params[0] || '';
+        const result = this.fetchResults.get(path);
+        
+        if (!result) {
             return {
-                message: 'No URLs have been fetched yet. Please submit URLs using POST /api/fetch',
+                message: `No URLs have been fetched for path '${path}' yet. Please submit URLs using POST /api/fetch/${path}`,
             };
         }
 
-        return this.lastFetchResult;
+        return result;
     }
 
     private validateUrls(urls: string[]): void {
@@ -73,7 +82,8 @@ export class UrlFetcherController {
         }
 
         if (!isWithinUrlLimit(urls)) {
-            throw createBadRequest('Maximum 50 URLs allowed per request');
+            const maxUrls = this.configService.get<number>('MAX_URLS_PER_REQUEST', 50);
+            throw createBadRequest(`Maximum ${maxUrls} URLs allowed per request`);
         }
 
         if (!hasUniqueUrls(urls)) {
