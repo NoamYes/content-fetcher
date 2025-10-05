@@ -12,10 +12,19 @@ export interface UrlFetchResult {
 }
 
 export interface FetchUrlsResponse {
+    requestId: string;
     results: UrlFetchResult[];
     totalUrls: number;
     successfulFetches: number;
     failedFetches: number;
     totalFetchTime: number;
     timestamp: Date;
+}
+
+export interface StoredFetchRequest {
+    id: string;
+    urls: string[];
+    result: FetchUrlsResponse;
+    createdAt: Date;
+    status: 'pending' | 'completed' | 'failed';
 }

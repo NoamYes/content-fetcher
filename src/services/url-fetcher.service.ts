@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios, { AxiosResponse, AxiosError } from 'axios';
 import { UrlFetchResult, FetchUrlsResponse } from '../interfaces/url-fetch-result.interface';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class UrlFetcherService {
@@ -9,11 +10,12 @@ export class UrlFetcherService {
     private readonly requestTimeout = 10000; // 10 seconds
     private readonly maxContentLength = 10 * 1024 * 1024; // 10MB
 
-    async fetchUrls(urls: string[]): Promise<FetchUrlsResponse> {
+    async fetchUrls(urls: string[], requestId?: string): Promise<FetchUrlsResponse> {
+        const id = requestId || randomUUID();
         const startTime = Date.now();
         const results: UrlFetchResult[] = [];
 
-        this.logger.log(`Starting to fetch ${urls.length} URLs`);
+        this.logger.log(`Starting to fetch ${urls.length} URLs with request ID: ${id}`);
 
         // Process URLs in parallel for better performance
         const fetchPromises = urls.map(url => this.fetchSingleUrl(url));
@@ -42,9 +44,10 @@ export class UrlFetcherService {
         const successfulFetches = results.filter(r => r.status >= 200 && r.status < 400).length;
         const failedFetches = results.length - successfulFetches;
 
-        this.logger.log(`Completed fetching URLs. Success: ${successfulFetches}, Failed: ${failedFetches}, Total time: ${totalFetchTime}ms`);
+        this.logger.log(`Completed fetching URLs with request ID ${id}. Success: ${successfulFetches}, Failed: ${failedFetches}, Total time: ${totalFetchTime}ms`);
 
         return {
+            requestId: id,
             results,
             totalUrls: urls.length,
             successfulFetches,

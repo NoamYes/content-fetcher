@@ -2,7 +2,7 @@ import { Controller, Post, Get, Body, HttpException, HttpStatus, Logger, Param, 
 import { ConfigService } from '@nestjs/config';
 import { UrlFetcherService } from '../services/url-fetcher.service';
 import { FetchUrlsDto } from '../dto/fetch-urls.dto';
-import { FetchUrlsResponse } from '../interfaces/url-fetch-result.interface';
+import { FetchUrlsResponse, StoredFetchRequest } from '../interfaces/url-fetch-result.interface';
 import {
     hasUrls,
     isWithinUrlLimit,
@@ -15,30 +15,37 @@ import {
 @Controller('api/fetch')
 export class UrlFetcherController {
     private readonly logger = new Logger(UrlFetcherController.name);
-    private fetchResults: Map<string, FetchUrlsResponse> = new Map();
+    private fetchResults: Map<string, StoredFetchRequest> = new Map();
 
     constructor(
         private readonly urlFetcherService: UrlFetcherService,
         private readonly configService: ConfigService
     ) { }
 
-    @Post('*')
-    @HttpCode(HttpStatus.OK)
-    async fetchUrls(@Req() req: any, @Body() fetchUrlsDto: FetchUrlsDto): Promise<FetchUrlsResponse> {
+    @Post()
+    @HttpCode(HttpStatus.CREATED)
+    async fetchUrls(@Body() fetchUrlsDto: FetchUrlsDto): Promise<FetchUrlsResponse> {
         try {
-            const path = req.params[0] || '';
-            this.logger.log(`Received request to fetch ${fetchUrlsDto.urls.length} URLs at path: ${path}`);
+            this.logger.log(`Received request to fetch ${fetchUrlsDto.urls.length} URLs`);
 
             // Validate URLs
             this.validateUrls(fetchUrlsDto.urls);
 
-            // Fetch URLs
+            // Fetch URLs (service will generate a unique ID)
             const result = await this.urlFetcherService.fetchUrls(fetchUrlsDto.urls);
 
-            // Store the result for GET requests using the path as key
-            this.fetchResults.set(path, result);
+            // Store the result with metadata
+            const storedRequest: StoredFetchRequest = {
+                id: result.requestId,
+                urls: fetchUrlsDto.urls,
+                result: result,
+                createdAt: new Date(),
+                status: 'completed'
+            };
 
-            this.logger.log(`Successfully processed ${fetchUrlsDto.urls.length} URLs and stored at path: ${path}`);
+            this.fetchResults.set(result.requestId, storedRequest);
+
+            this.logger.log(`Successfully processed ${fetchUrlsDto.urls.length} URLs with request ID: ${result.requestId}`);
             return result;
 
         } catch (error) {
@@ -59,18 +66,31 @@ export class UrlFetcherController {
         }
     }
 
-    @Get('*')
-    async getFetchResult(@Req() req: any): Promise<FetchUrlsResponse | { message: string }> {
-        const path = req.params[0] || '';
-        const result = this.fetchResults.get(path);
-        
-        if (!result) {
-            return {
-                message: `No URLs have been fetched for path '${path}' yet. Please submit URLs using POST /api/fetch/${path}`,
-            };
+    @Get(':id')
+    async getFetchResult(@Param('id') id: string): Promise<FetchUrlsResponse | { message: string }> {
+        const storedRequest = this.fetchResults.get(id);
+
+        if (!storedRequest) {
+            throw new HttpException(
+                {
+                    statusCode: HttpStatus.NOT_FOUND,
+                    message: `No fetch request found with ID: ${id}`,
+                    error: 'Not Found'
+                },
+                HttpStatus.NOT_FOUND
+            );
         }
 
-        return result;
+        return storedRequest.result;
+    }
+
+    @Get()
+    async getAllFetchResults(): Promise<{ requests: StoredFetchRequest[] }> {
+        const requests = Array.from(this.fetchResults.values());
+
+        return {
+            requests: requests.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        };
     }
 
     private validateUrls(urls: string[]): void {
