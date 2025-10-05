@@ -12,7 +12,7 @@ import {
     findFirstDuplicateUrlIndex
 } from '../validators/url.validator';
 
-@Controller('api/fetch')
+@Controller('api/v1/requests')
 export class UrlFetcherController {
     private readonly logger = new Logger(UrlFetcherController.name);
     private fetchResults: Map<string, StoredFetchRequest> = new Map();
@@ -24,7 +24,7 @@ export class UrlFetcherController {
 
     @Post()
     @HttpCode(HttpStatus.CREATED)
-    async fetchUrls(@Body() fetchUrlsDto: FetchUrlsDto): Promise<FetchUrlsResponse> {
+    async createFetchRequest(@Body() fetchUrlsDto: FetchUrlsDto): Promise<FetchUrlsResponse> {
         try {
             this.logger.log(`Received request to fetch ${fetchUrlsDto.urls.length} URLs`);
 
@@ -67,30 +67,28 @@ export class UrlFetcherController {
     }
 
     @Get(':id')
-    async getFetchResult(@Param('id') id: string): Promise<FetchUrlsResponse | { message: string }> {
+    async getRequestById(@Param('id') id: string): Promise<StoredFetchRequest> {
         const storedRequest = this.fetchResults.get(id);
 
         if (!storedRequest) {
             throw new HttpException(
                 {
                     statusCode: HttpStatus.NOT_FOUND,
-                    message: `No fetch request found with ID: ${id}`,
+                    message: `Request not found with ID: ${id}`,
                     error: 'Not Found'
                 },
                 HttpStatus.NOT_FOUND
             );
         }
 
-        return storedRequest.result;
+        return storedRequest;
     }
 
     @Get()
-    async getAllFetchResults(): Promise<{ requests: StoredFetchRequest[] }> {
+    async getAllRequests(): Promise<StoredFetchRequest[]> {
         const requests = Array.from(this.fetchResults.values());
 
-        return {
-            requests: requests.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        };
+        return requests.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
 
     private validateUrls(urls: string[]): void {

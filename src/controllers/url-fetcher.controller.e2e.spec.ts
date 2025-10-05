@@ -23,10 +23,10 @@ describe('URL Fetcher E2E', () => {
         await app.close();
     });
 
-    it('should fetch URLs and retrieve them by ID', async () => {
-        // Fetch URLs
+    it('should create a fetch request and retrieve it by ID', async () => {
+        // Create fetch request
         const response = await request(app.getHttpServer())
-            .post('/api/fetch')
+            .post('/api/v1/requests')
             .send({ urls: ['https://www.google.com', 'https://www.github.com'] })
             .expect(HttpStatus.CREATED);
 
@@ -38,51 +38,51 @@ describe('URL Fetcher E2E', () => {
 
         // Retrieve by ID
         const getResponse = await request(app.getHttpServer())
-            .get(`/api/fetch/${requestId}`)
+            .get(`/api/v1/requests/${requestId}`)
             .expect(HttpStatus.OK);
 
-        expect(getResponse.body.requestId).toBe(requestId);
-        expect(getResponse.body.totalUrls).toBe(2);
+        expect(getResponse.body.id).toBe(requestId);
+        expect(getResponse.body.result.totalUrls).toBe(2);
     });
 
     it('should accumulate multiple fetch requests', async () => {
         // First request
         const response1 = await request(app.getHttpServer())
-            .post('/api/fetch')
+            .post('/api/v1/requests')
             .send({ urls: ['https://www.example.com'] })
             .expect(HttpStatus.CREATED);
 
         // Second request
         const response2 = await request(app.getHttpServer())
-            .post('/api/fetch')
+            .post('/api/v1/requests')
             .send({ urls: ['https://www.npmjs.com'] })
             .expect(HttpStatus.CREATED);
 
         // Get all requests
         const allResponse = await request(app.getHttpServer())
-            .get('/api/fetch')
+            .get('/api/v1/requests')
             .expect(HttpStatus.OK);
 
         // Should have at least our 2 requests (may have more from other tests)
-        expect(allResponse.body.requests.length).toBeGreaterThanOrEqual(2);
-
+        expect(allResponse.body.length).toBeGreaterThanOrEqual(2);
+        
         // But should definitely contain our two request IDs
-        const requestIds = allResponse.body.requests.map((r: any) => r.id);
+        const requestIds = allResponse.body.map((r: any) => r.id);
         expect(requestIds).toContain(response1.body.requestId);
         expect(requestIds).toContain(response2.body.requestId);
     });
 
     it('should return 404 for non-existent request ID', async () => {
         const response = await request(app.getHttpServer())
-            .get('/api/fetch/non-existent-id-12345')
+            .get('/api/v1/requests/non-existent-id-12345')
             .expect(HttpStatus.NOT_FOUND);
 
-        expect(response.body.message).toContain('No fetch request found');
+        expect(response.body.message).toContain('Request not found');
     });
 
     it('should reject empty URLs array with appropriate error', async () => {
         const response = await request(app.getHttpServer())
-            .post('/api/fetch')
+            .post('/api/v1/requests')
             .send({ urls: [] })
             .expect(HttpStatus.BAD_REQUEST);
 
@@ -91,7 +91,7 @@ describe('URL Fetcher E2E', () => {
 
     it('should reject duplicate URLs with index information', async () => {
         const response = await request(app.getHttpServer())
-            .post('/api/fetch')
+            .post('/api/v1/requests')
             .send({
                 urls: [
                     'https://www.example.com',
@@ -107,7 +107,7 @@ describe('URL Fetcher E2E', () => {
 
     it('should reject invalid URLs with index information', async () => {
         const response = await request(app.getHttpServer())
-            .post('/api/fetch')
+            .post('/api/v1/requests')
             .send({
                 urls: ['https://www.example.com', 'not-a-valid-url', 'https://www.google.com'],
             })
@@ -119,7 +119,7 @@ describe('URL Fetcher E2E', () => {
 
     it('should handle failed URLs gracefully and still return results', async () => {
         const response = await request(app.getHttpServer())
-            .post('/api/fetch')
+            .post('/api/v1/requests')
             .send({
                 urls: [
                     'https://www.google.com',

@@ -39,8 +39,8 @@ describe('UrlFetcherController', () => {
         jest.clearAllMocks();
     });
 
-    describe('POST /api/fetch', () => {
-        it('should fetch URLs successfully', async () => {
+    describe('POST /api/v1/requests', () => {
+        it('should create fetch request successfully', async () => {
             const dto: FetchUrlsDto = {
                 urls: ['http://example.com', 'http://google.com'],
             };
@@ -66,7 +66,7 @@ describe('UrlFetcherController', () => {
 
             mockUrlFetcherService.fetchUrls.mockResolvedValue(mockResponse);
 
-            const result = await controller.fetchUrls(dto);
+            const result = await controller.createFetchRequest(dto);
 
             expect(result.requestId).toBe('test-id-123');
             expect(result.totalUrls).toBe(2);
@@ -76,7 +76,7 @@ describe('UrlFetcherController', () => {
         it('should reject empty URLs array', async () => {
             const dto: FetchUrlsDto = { urls: [] };
 
-            await expect(controller.fetchUrls(dto)).rejects.toThrow('URLs array cannot be empty');
+            await expect(controller.createFetchRequest(dto)).rejects.toThrow('URLs array cannot be empty');
         });
 
         it('should reject too many URLs', async () => {
@@ -84,7 +84,7 @@ describe('UrlFetcherController', () => {
                 urls: Array(51).fill('http://example.com'),
             };
 
-            await expect(controller.fetchUrls(dto)).rejects.toThrow('Maximum 50 URLs allowed');
+            await expect(controller.createFetchRequest(dto)).rejects.toThrow('Maximum 50 URLs allowed');
         });
 
         it('should reject duplicate URLs', async () => {
@@ -92,7 +92,7 @@ describe('UrlFetcherController', () => {
                 urls: ['http://example.com', 'http://google.com', 'http://example.com'],
             };
 
-            await expect(controller.fetchUrls(dto)).rejects.toThrow(/Duplicate URL found at index 2/);
+            await expect(controller.createFetchRequest(dto)).rejects.toThrow(/Duplicate URL found at index 2/);
         });
 
         it('should reject invalid URLs', async () => {
@@ -100,7 +100,7 @@ describe('UrlFetcherController', () => {
                 urls: ['http://example.com', 'not-a-valid-url'],
             };
 
-            await expect(controller.fetchUrls(dto)).rejects.toThrow(/Invalid URL at index 1/);
+            await expect(controller.createFetchRequest(dto)).rejects.toThrow(/Invalid URL at index 1/);
         });
 
         it('should handle service errors', async () => {
@@ -110,13 +110,13 @@ describe('UrlFetcherController', () => {
 
             mockUrlFetcherService.fetchUrls.mockRejectedValue(new Error('Service error'));
 
-            await expect(controller.fetchUrls(dto)).rejects.toThrow(
+            await expect(controller.createFetchRequest(dto)).rejects.toThrow(
                 'Internal server error while fetching URLs'
             );
         });
     });
 
-    describe('GET /api/fetch/:id', () => {
+    describe('GET /api/v1/requests/:id', () => {
         it('should return stored fetch result', async () => {
             const dto: FetchUrlsDto = {
                 urls: ['http://example.com'],
@@ -134,15 +134,16 @@ describe('UrlFetcherController', () => {
 
             mockUrlFetcherService.fetchUrls.mockResolvedValue(mockResponse);
 
-            await controller.fetchUrls(dto);
-            const result = await controller.getFetchResult('stored-id');
+            await controller.createFetchRequest(dto);
+            const result = await controller.getRequestById('stored-id');
 
-            expect(result).toEqual(mockResponse);
+            expect(result.id).toBe('stored-id');
+            expect(result.result).toEqual(mockResponse);
         });
 
         it('should throw 404 for non-existent request ID', async () => {
             try {
-                await controller.getFetchResult('non-existent-id');
+                await controller.getRequestById('non-existent-id');
                 fail('Should have thrown an error');
             } catch (error) {
                 expect(error).toBeInstanceOf(HttpException);
@@ -151,7 +152,7 @@ describe('UrlFetcherController', () => {
         });
     });
 
-    describe('GET /api/fetch', () => {
+    describe('GET /api/v1/requests', () => {
         it('should return all stored fetch results', async () => {
             const dto1: FetchUrlsDto = { urls: ['http://example1.com'] };
             const dto2: FetchUrlsDto = { urls: ['http://example2.com'] };
@@ -176,20 +177,20 @@ describe('UrlFetcherController', () => {
                     timestamp: new Date(),
                 });
 
-            await controller.fetchUrls(dto1);
-            await controller.fetchUrls(dto2);
+            await controller.createFetchRequest(dto1);
+            await controller.createFetchRequest(dto2);
 
-            const result = await controller.getAllFetchResults();
+            const result = await controller.getAllRequests();
 
-            expect(result.requests).toHaveLength(2);
-            expect(result.requests.map((r) => r.id)).toContain('id-1');
-            expect(result.requests.map((r) => r.id)).toContain('id-2');
+            expect(result).toHaveLength(2);
+            expect(result.map((r) => r.id)).toContain('id-1');
+            expect(result.map((r) => r.id)).toContain('id-2');
         });
 
         it('should return empty array when no requests exist', async () => {
-            const result = await controller.getAllFetchResults();
+            const result = await controller.getAllRequests();
 
-            expect(result.requests).toEqual([]);
+            expect(result).toEqual([]);
         });
     });
 });
