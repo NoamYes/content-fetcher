@@ -9,10 +9,12 @@
         "start:dev": "nest start --watch",
         "start:debug": "nest start --debug --watch",
         "start:prod": "node dist/main",
-        "test": "jest",
-        "test:watch": "jest --watch",
-        "test:cov": "jest --coverage",
-        "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"
+        "test": "jest --testPathIgnorePatterns='.e2e.spec.ts$'",
+        "test:watch": "jest --watch --testPathIgnorePatterns='.e2e.spec.ts$'",
+        "test:cov": "jest --coverage --testPathIgnorePatterns='.e2e.spec.ts$'",
+        "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+        "test:e2e": "jest --testPathIgnorePatterns='!.e2e.spec.ts$' --testRegex='.e2e.spec.ts$'",
+        "test:all": "jest"
     },
     "repository": {
         "type": "git",
@@ -42,8 +44,10 @@
         "@nestjs/testing": "^11.1.6",
         "@types/jest": "^29.5.14",
         "@types/node": "^24.5.2",
+        "@types/supertest": "^6.0.2",
         "jest": "^29.7.0",
         "nodemon": "^3.1.10",
+        "supertest": "^7.0.0",
         "ts-jest": "^29.2.5",
         "ts-node": "^10.9.2"
     },
