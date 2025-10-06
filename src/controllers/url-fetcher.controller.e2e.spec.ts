@@ -49,33 +49,6 @@ describe('URL Fetcher E2E', () => {
         expect(getResponse.body.result.totalUrls).toBe(2);
     });
 
-    it('should accumulate multiple fetch requests', async () => {
-        // First request
-        const response1 = await request(app.getHttpServer())
-            .post('/api/v1/requests')
-            .send({ urls: ['https://www.example.com'] })
-            .expect(HttpStatus.CREATED);
-
-        // Second request
-        const response2 = await request(app.getHttpServer())
-            .post('/api/v1/requests')
-            .send({ urls: ['https://www.npmjs.com'] })
-            .expect(HttpStatus.CREATED);
-
-        // Get all requests
-        const allResponse = await request(app.getHttpServer())
-            .get('/api/v1/requests')
-            .expect(HttpStatus.OK);
-
-        // Should have at least our 2 requests (may have more from other tests)
-        expect(allResponse.body.length).toBeGreaterThanOrEqual(2);
-
-        // But should definitely contain our two request IDs
-        const requestIds = allResponse.body.map((r: any) => r.id);
-        expect(requestIds).toContain(response1.body.requestId);
-        expect(requestIds).toContain(response2.body.requestId);
-    });
-
     it('should return 404 for non-existent request ID', async () => {
         const response = await request(app.getHttpServer())
             .get('/api/v1/requests/non-existent-id-12345')

@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600">
+  <!-- Background -->
+  <rect width="900" height="600" fill="#fafafa"/>
+  
+  <!-- Header -->
+  <rect width="900" height="80" fill="#2c3e50"/>
+  <text x="30" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#85ea2d">
+    URL Fetcher API
+  </text>
+  <text x="30" y="60" font-family="Arial, sans-serif" font-size="12" fill="#b8b8b8">
+    OpenAPI Definition v1.0
+  </text>
+  <rect x="750" y="25" width="120" height="30" fill="#85ea2d" rx="3"/>
+  <text x="810" y="47" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#2c3e50">
+    /api/docs
+  </text>
+  
+  <!-- Description -->
+  <text x="30" y="110" font-family="Arial, sans-serif" font-size="14" fill="#555">
+    RESTful API for fetching multiple URLs in parallel with persistent storage
+  </text>
+  
+  <!-- Endpoints Section -->
+  <text x="30" y="150" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#333">
+    requests
+  </text>
+  <text x="120" y="150" font-family="Arial, sans-serif" font-size="12" fill="#999">
+    URL fetch request operations
+  </text>
+  
+  <!-- POST Endpoint -->
+  <rect x="30" y="170" width="840" height="70" fill="white" stroke="#e0e0e0" stroke-width="1" rx="5"/>
+  <rect x="40" y="185" width="60" height="25" fill="#49cc90" rx="3"/>
+  <text x="70" y="203" font-family="monospace" font-size="12" font-weight="bold" text-anchor="middle" fill="white">
+    POST
+  </text>
+  <text x="115" y="203" font-family="monospace" font-size="14" font-weight="bold" fill="#333">
+    /api/v1/requests
+  </text>
+  <text x="115" y="225" font-family="Arial, sans-serif" font-size="12" fill="#666">
+    Fetch multiple URLs
+  </text>
+  <rect x="750" y="185" width="100" height="25" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1" rx="3"/>
+  <text x="800" y="203" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+    Try it out
+  </text>
+  
+  <!-- GET by ID Endpoint -->
+  <rect x="30" y="255" width="840" height="70" fill="white" stroke="#e0e0e0" stroke-width="1" rx="5"/>
+  <rect x="40" y="270" width="60" height="25" fill="#61affe" rx="3"/>
+  <text x="70" y="288" font-family="monospace" font-size="12" font-weight="bold" text-anchor="middle" fill="white">
+    GET
+  </text>
+  <text x="115" y="288" font-family="monospace" font-size="14" font-weight="bold" fill="#333">
+    /api/v1/requests/{id}
+  </text>
+  <text x="115" y="310" font-family="Arial, sans-serif" font-size="12" fill="#666">
+    Get request by ID
+  </text>
+  <rect x="750" y="270" width="100" height="25" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1" rx="3"/>
+  <text x="800" y="288" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+    Try it out
+  </text>
+  
+  <!-- Health Section -->
+  <text x="30" y="370" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#333">
+    health
+  </text>
+  <text x="100" y="370" font-family="Arial, sans-serif" font-size="12" fill="#999">
+    Health check
+  </text>
+  
+  <!-- Health Endpoint -->
+  <rect x="30" y="390" width="840" height="70" fill="white" stroke="#e0e0e0" stroke-width="1" rx="5"/>
+  <rect x="40" y="405" width="60" height="25" fill="#61affe" rx="3"/>
+  <text x="70" y="423" font-family="monospace" font-size="12" font-weight="bold" text-anchor="middle" fill="white">
+    GET
+  </text>
+  <text x="115" y="423" font-family="monospace" font-size="14" font-weight="bold" fill="#333">
+    /health
+  </text>
+  <text x="115" y="445" font-family="Arial, sans-serif" font-size="12" fill="#666">
+    Health check
+  </text>
+  <rect x="750" y="405" width="100" height="25" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1" rx="3"/>
+  <text x="800" y="423" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+    Try it out
+  </text>
+  
+  <!-- Models Section -->
+  <text x="30" y="500" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#333">
+    Schemas
+  </text>
+  
+  <rect x="30" y="515" width="250" height="35" fill="white" stroke="#e0e0e0" stroke-width="1" rx="3"/>
+  <text x="45" y="538" font-family="monospace" font-size="13" fill="#333">
+    FetchUrlsDto
+  </text>
+  <text x="260" y="538" font-family="Arial, sans-serif" font-size="11" fill="#999">
+    ▼
+  </text>
+  
+  <rect x="310" y="515" width="250" height="35" fill="white" stroke="#e0e0e0" stroke-width="1" rx="3"/>
+  <text x="325" y="538" font-family="monospace" font-size="13" fill="#333">
+    FetchUrlsResponse
+  </text>
+  <text x="540" y="538" font-family="Arial, sans-serif" font-size="11" fill="#999">
+    ▼
+  </text>
+  
+  <rect x="590" y="515" width="250" height="35" fill="white" stroke="#e0e0e0" stroke-width="1" rx="3"/>
+  <text x="605" y="538" font-family="monospace" font-size="13" fill="#333">
+    ErrorResponse
+  </text>
+  <text x="820" y="538" font-family="Arial, sans-serif" font-size="11" fill="#999">
+    ▼
+  </text>
+  
+  <!-- Footer annotation -->
+  <text x="450" y="585" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#999" font-style="italic">
+    Interactive Swagger UI - Test all endpoints in your browser
+  </text>
+</svg>
+

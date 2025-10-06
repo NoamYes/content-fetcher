@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Body, HttpException, HttpStatus, Logger, Param, Inject, HttpCode } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UrlFetcherService } from '../services/url-fetcher.service';
 import { FetchUrlsDto } from '../dto/fetch-urls.dto';
 import { FetchUrlsResponse, StoredFetchRequest } from '../interfaces/url-fetch-result.interface';
@@ -13,6 +14,7 @@ import {
     findFirstDuplicateUrlIndex
 } from '../validators/url.validator';
 
+@ApiTags('requests')
 @Controller('api/v1/requests')
 export class UrlFetcherController {
     private readonly logger = new Logger(UrlFetcherController.name);
@@ -25,6 +27,13 @@ export class UrlFetcherController {
 
     @Post()
     @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({
+        summary: 'Fetch multiple URLs',
+        description: 'Fetches URLs in parallel. Validates: non-empty, max 50 URLs, unique URLs, valid format (http/https). Returns results with status, content, timing, and redirect info for each URL.'
+    })
+    @ApiResponse({ status: 201, description: 'Success - Returns requestId and results for all URLs' })
+    @ApiResponse({ status: 400, description: 'Validation error - Empty array, duplicates, invalid URLs, or exceeds limit' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
     async createFetchRequest(@Body() fetchUrlsDto: FetchUrlsDto): Promise<FetchUrlsResponse> {
         try {
             this.logger.log(`Received request to fetch ${fetchUrlsDto.urls.length} URLs`);
@@ -68,6 +77,10 @@ export class UrlFetcherController {
     }
 
     @Get(':id')
+    @ApiOperation({ summary: 'Get request by ID', description: 'Retrieve stored request with all results' })
+    @ApiParam({ name: 'id', description: 'Request ID (UUID)', example: '550e8400-e29b-41d4-a716-446655440000' })
+    @ApiResponse({ status: 200, description: 'Success - Returns stored request' })
+    @ApiResponse({ status: 404, description: 'Request not found' })
     async getRequestById(@Param('id') id: string): Promise<StoredFetchRequest> {
         const storedRequest = await this.requestsRepository.findById(id);
 
@@ -83,15 +96,6 @@ export class UrlFetcherController {
         }
 
         return storedRequest;
-    }
-
-    @Get()
-    async getAllRequests(): Promise<StoredFetchRequest[]> {
-        const requests = await this.requestsRepository.findAll();
-
-        return requests.sort((a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
     }
 
     private validateUrls(urls: string[]): void {

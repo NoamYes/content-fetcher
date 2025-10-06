@@ -1,0 +1,233 @@
+openapi: 3.0.0
+info:
+  title: URL Fetcher API
+  description: RESTful API for fetching multiple URLs in parallel with persistent storage
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+
+tags:
+  - name: requests
+    description: URL fetch request operations
+  - name: health
+    description: Health check
+
+paths:
+  /api/v1/requests:
+    post:
+      tags:
+        - requests
+      summary: Fetch multiple URLs
+      description: |
+        Fetches URLs in parallel and stores results.
+        
+        **Validation:**
+        - At least 1 URL required
+        - Maximum 50 URLs per request
+        - URLs must be unique
+        - Valid format (http/https)
+        
+        **Returns:** Status, content, timing, and redirect info for each URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FetchUrlsDto'
+            example:
+              urls:
+                - https://www.google.com
+                - https://www.github.com
+      responses:
+        '201':
+          description: Success - Returns requestId and results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FetchUrlsResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                empty:
+                  value:
+                    statusCode: 400
+                    message: URLs array cannot be empty
+                    error: Bad Request
+                duplicate:
+                  value:
+                    statusCode: 400
+                    message: "Duplicate URL found at index 2: https://www.google.com"
+                    error: Bad Request
+                invalid:
+                  value:
+                    statusCode: 400
+                    message: "Invalid URL at index 1: not-a-valid-url"
+                    error: Bad Request
+        '500':
+          description: Internal server error
+
+  /api/v1/requests/{id}:
+    get:
+      tags:
+        - requests
+      summary: Get request by ID
+      description: Retrieve stored request with all results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Request ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Success - Returns stored request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoredFetchRequest'
+        '404':
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check
+      description: Returns API status and uptime
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    FetchUrlsDto:
+      type: object
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: string
+            format: uri
+    
+    FetchUrlsResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UrlFetchResult'
+        totalUrls:
+          type: integer
+        successfulFetches:
+          type: integer
+        failedFetches:
+          type: integer
+        totalFetchTime:
+          type: integer
+          description: Milliseconds
+        timestamp:
+          type: string
+          format: date-time
+    
+    UrlFetchResult:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        status:
+          type: integer
+          description: HTTP status code (for successful fetches)
+        content:
+          type: string
+          description: Response body (truncated if large)
+        contentType:
+          type: string
+        contentLength:
+          type: integer
+          description: Size in bytes
+        fetchTime:
+          type: integer
+          description: Milliseconds
+        redirectCount:
+          type: integer
+        finalUrl:
+          type: string
+          format: uri
+          description: Final URL after redirects
+        error:
+          type: string
+          description: Error message (for failed fetches)
+        timestamp:
+          type: string
+          format: date-time
+    
+    StoredFetchRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        urls:
+          type: array
+          items:
+            type: string
+            format: uri
+        result:
+          $ref: '#/components/schemas/FetchUrlsResponse'
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [completed, failed]
+    
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+          description: Seconds
+        service:
+          type: string
+        version:
+          type: string
+    
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string

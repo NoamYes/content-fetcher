@@ -1,332 +1,397 @@
-# URL Fetcher Service
+# URL Fetcher API
 
-A robust NestJS-based HTTP service that fetches content from multiple URLs and provides a REST API for submitting URLs and retrieving fetch results.
+RESTful API for fetching multiple URLs in parallel with persistent storage.
 
-## 🚀 Features
+---
 
-- **Bulk URL Fetching**: Submit multiple URLs in a single request (up to 50 URLs)
-- **Redirect Handling**: Automatically follows redirects up to 5 levels deep
-- **Comprehensive Error Handling**: Detailed error messages for various failure scenarios
-- **Content Management**: Automatic content truncation for large responses (10MB limit)
-- **Performance Optimized**: Parallel processing of URLs for faster execution
-- **Health Monitoring**: Built-in health check endpoint
-- **Production Ready**: Built with NestJS best practices and robust error handling
+## Quick Start
 
-## 📋 Requirements
-
-- Node.js (v16 or higher)
-- npm or yarn
-- Internet connection for fetching external URLs
-
-## 🛠️ Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd guardz-assignment
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Build the application**
-   ```bash
-   npm run build
-   ```
-
-## 🚀 Running the Application
-
-### Development Mode
 ```bash
+# Install
+npm install
+
+# Run
 npm run start:dev
+
+# Access API
+http://localhost:3000
 ```
 
-### Production Mode
-```bash
-npm run start:prod
+## What It Does
+
+> **💡 Tip:** Start the server and visit [http://localhost:3000/api/docs](http://localhost:3000/api/docs) to explore the full interactive API documentation!
+
+### Fetch Multiple URLs
+
+Send multiple URLs, get back detailed results for each:
+
+- HTTP status code
+- Response content
+- Fetch time
+- Redirect information
+- Error details (if failed)
+
+### Store and Retrieve
+
+All requests are automatically stored and can be retrieved later by ID.
+
+### Smart Processing
+
+- **Parallel fetching** - All URLs fetched simultaneously
+- **Continues on failure** - One failed URL doesn't stop others
+- **Follows redirects** - Automatically handles up to 5 redirects
+- **Handles timeouts** - 10-second timeout per request
+- **Prevents memory issues** - Content truncated at 10MB
+
+---
+
+## 📖 Swagger Documentation
+
+**The complete interactive API documentation is available at:**
+
+### **[http://localhost:3000/api/docs](http://localhost:3000/api/docs)**
+
+![Swagger Documentation](./docs/swagger-preview.svg)
+
+## API Endpoints
+
+### 1. Fetch URLs
+
+```http
+POST /api/v1/requests
+Content-Type: application/json
+
+{
+  "urls": [
+    "https://www.google.com",
+    "https://www.github.com"
+  ]
+}
 ```
 
-### Debug Mode
-```bash
-npm run start:debug
+**Response (201 Created):**
+
+```json
+{
+  "requestId": "550e8400-e29b-41d4-a716-446655440000",
+  "results": [
+    {
+      "url": "https://www.google.com",
+      "status": 200,
+      "content": "<!DOCTYPE html>...",
+      "contentType": "text/html; charset=utf-8",
+      "contentLength": 15234,
+      "fetchTime": 145,
+      "redirectCount": 0,
+      "timestamp": "2024-01-15T10:30:00.543Z"
+    },
+    {
+      "url": "https://www.github.com",
+      "status": 200,
+      "content": "<!DOCTYPE html>...",
+      "contentType": "text/html; charset=utf-8",
+      "contentLength": 22451,
+      "fetchTime": 198,
+      "redirectCount": 1,
+      "finalUrl": "https://github.com/",
+      "timestamp": "2024-01-15T10:30:00.741Z"
+    }
+  ],
+  "totalUrls": 2,
+  "successfulFetches": 2,
+  "failedFetches": 0,
+  "totalFetchTime": 343,
+  "timestamp": "2024-01-15T10:30:00.886Z"
+}
 ```
 
-The service will start on `http://localhost:3000` by default.
+### 2. Get Request by ID
 
-## 📡 API Endpoints
+```http
+GET /api/v1/requests/:id
+```
 
-### 1. Health Check
-```bash
+**Response (200 OK):**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "urls": ["https://www.google.com", "https://www.github.com"],
+  "result": { ... },
+  "createdAt": "2024-01-15T10:30:00.000Z",
+  "status": "completed"
+}
+```
+
+**Response (404 Not Found):**
+
+```json
+{
+  "statusCode": 404,
+  "message": "Request not found with ID: invalid-id",
+  "error": "Not Found"
+}
+```
+
+### 3. Health Check
+
+```http
 GET /health
 ```
-Returns the service health status and basic information.
 
-**Response:**
+**Response (200 OK):**
+
 ```json
 {
   "status": "ok",
-  "timestamp": "2024-01-01T12:00:00.000Z",
-  "uptime": 123.456,
+  "timestamp": "2024-01-15T10:30:00.543Z",
+  "uptime": 3600.5,
   "service": "URL Fetcher Service",
   "version": "1.0.0"
 }
 ```
 
-### 2. Fetch URLs
+---
+
+## Validation Rules
+
+The API enforces the following validations:
+
+| Rule                   | Description                  | Error Example                                   |
+| ---------------------- | ---------------------------- | ----------------------------------------------- |
+| **Non-empty**    | At least 1 URL required      | `URLs array cannot be empty`                  |
+| **Max limit**    | Maximum 50 URLs per request  | `Maximum 50 URLs allowed per request`         |
+| **Unique**       | No duplicate URLs            | `Duplicate URL found at index 2: https://...` |
+| **Valid format** | Must be valid http/https URL | `Invalid URL at index 1: not-a-valid-url`     |
+
+All validation errors include the specific index and value for easy debugging.
+
+---
+
+## Configuration
+
+Create a `.env` file:
+
 ```bash
-POST /api/fetch
-Content-Type: application/json
+# Server
+PORT=3000
+
+# Storage (false = memory, true = file)
+IS_PERSISTENT=false
+STORAGE_DIR=./storage
+
+# Limits
+MAX_URLS_PER_REQUEST=50
 ```
 
-Submit URLs to be fetched.
+### Storage Options
 
-**Request Body:**
-```json
-{
-  "urls": [
-    "https://example.com",
-    "https://httpbin.org/get",
-    "https://jsonplaceholder.typicode.com/posts/1"
-  ]
-}
+| Mode             | Setting                 | Best For             | Persistence       |
+| ---------------- | ----------------------- | -------------------- | ----------------- |
+| **Memory** | `IS_PERSISTENT=false` | Development, Testing | Lost on restart   |
+| **File**   | `IS_PERSISTENT=true`  | Production, Demos    | Survives restarts |
+
+---
+
+## Usage Examples
+
+### cURL
+
+```bash
+# Fetch URLs
+curl -X POST http://localhost:3000/api/v1/requests \
+  -H "Content-Type: application/json" \
+  -d '{"urls": ["https://www.google.com", "https://www.github.com"]}'
+
+# Get by ID
+curl http://localhost:3000/api/v1/requests/550e8400-e29b-41d4-a716-446655440000
 ```
 
-**Response:**
+### JavaScript/TypeScript
+
+```javascript
+// Fetch URLs
+const response = await fetch('http://localhost:3000/api/v1/requests', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    urls: ['https://www.google.com', 'https://www.github.com']
+  })
+});
+
+const result = await response.json();
+console.log('Request ID:', result.requestId);
+
+// Get by ID
+const saved = await fetch(
+  `http://localhost:3000/api/v1/requests/${result.requestId}`
+);
+const request = await saved.json();
+```
+
+### Python
+
+```python
+import requests
+
+# Fetch URLs
+response = requests.post(
+    'http://localhost:3000/api/v1/requests',
+    json={'urls': ['https://www.google.com', 'https://www.github.com']}
+)
+result = response.json()
+
+# Get by ID
+request = requests.get(
+    f'http://localhost:3000/api/v1/requests/{result["requestId"]}'
+).json()
+```
+
+---
+
+## Error Handling
+
+The API gracefully handles various error scenarios:
+
+| Error Type                   | Description                | Example                   |
+| ---------------------------- | -------------------------- | ------------------------- |
+| **Timeout**            | Request exceeds 10 seconds | `timeout exceeded`      |
+| **Domain Not Found**   | DNS resolution fails       | `getaddrinfo ENOTFOUND` |
+| **Connection Refused** | Server not responding      | `connect ECONNREFUSED`  |
+| **HTTP Errors**        | 4XX or 5XX status codes    | `404 Not Found`         |
+| **Network Errors**     | General failures           | `Network error`         |
+
+Failed URLs are included in the response with error details. Successful URLs still return results.
+
+**Example with failures:**
+
 ```json
 {
+  "requestId": "...",
   "results": [
     {
-      "url": "https://example.com",
+      "url": "https://www.google.com",
       "status": 200,
-      "content": "<html>...</html>",
-      "contentType": "text/html",
-      "contentLength": 1256,
-      "fetchTime": 150,
-      "redirectCount": 0,
-      "finalUrl": "https://www.example.com",
-      "timestamp": "2024-01-01T12:00:00.000Z"
+      "content": "...",
+      "fetchTime": 145
+    },
+    {
+      "url": "https://nonexistent-domain-xyz.com",
+      "error": "Domain not found",
+      "fetchTime": 2000
     }
   ],
-  "totalUrls": 3,
-  "successfulFetches": 2,
+  "totalUrls": 2,
+  "successfulFetches": 1,
   "failedFetches": 1,
-  "totalFetchTime": 500,
-  "timestamp": "2024-01-01T12:00:00.000Z"
+  "totalFetchTime": 2145
 }
 ```
 
-### 3. Get Last Fetch Results
+---
+
+## Testing
+
 ```bash
-GET /api/fetch
-```
-
-Retrieve the results from the last URL fetch operation.
-
-**Response:**
-```json
-{
-  "results": [...],
-  "totalUrls": 3,
-  "successfulFetches": 2,
-  "failedFetches": 1,
-  "totalFetchTime": 500,
-  "timestamp": "2024-01-01T12:00:00.000Z"
-}
-```
-
-If no URLs have been fetched yet:
-```json
-{
-  "message": "No URLs have been fetched yet. Please submit URLs using POST /api/fetch"
-}
-```
-
-## 🧪 Testing
-
-### Run Unit Tests
-```bash
+# Unit tests (24 tests)
 npm test
-```
 
-### Run Tests with Coverage
-```bash
+# E2E tests (6 tests)
+npm run test:e2e
+
+# All tests
+npm run test:all
+
+# With coverage
 npm run test:cov
 ```
 
-### Run End-to-End Tests
-```bash
-npm run test:e2e
+**Test Coverage:** 30 tests, 100% passing ✅
+
+---
+
+## 📚 Documentation
+
+### Interactive Swagger UI
+
+All API documentation is available through an interactive Swagger interface:
+
+**👉 [http://localhost:3000/api/docs](http://localhost:3000/api/docs)**
+
+The Swagger UI provides:
+
+- Complete endpoint documentation
+- Request/response schemas
+- Live API testing ("Try it out" buttons)
+- Validation rules and constraints
+- Error response examples
+- Data models and examples
+
+### OpenAPI Specification
+
+The raw OpenAPI specification is available at: [openapi.yaml](./openapi.yaml)
+
+---
+
+## Appendix
+
+### Architecture
+
+```
+┌─────────────────┐
+│   Controllers   │  REST endpoints (HTTP layer)
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│    Services     │  Business logic (URL fetching)
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  Repositories   │  Data access (memory/file)
+└─────────────────┘
 ```
 
-### Run All Tests in Watch Mode
-```bash
-npm run test:watch
-```
+### Tech Stack
 
-## 📝 Usage Examples
-
-### Using curl
-
-1. **Submit URLs for fetching:**
-   ```bash
-   curl -X POST -H "Content-Type: application/json" \
-        -d '{"urls": ["https://httpbin.org/get", "https://jsonplaceholder.typicode.com/posts/1"]}' \
-        http://localhost:3000/api/fetch
-   ```
-
-2. **Get the results:**
-   ```bash
-   curl http://localhost:3000/api/fetch
-   ```
-
-3. **Check service health:**
-   ```bash
-   curl http://localhost:3000/health
-   ```
-
-### Using JavaScript/Node.js
-
-```javascript
-const axios = require('axios');
-
-// Submit URLs for fetching
-const response = await axios.post('http://localhost:3000/api/fetch', {
-  urls: [
-    'https://httpbin.org/get',
-    'https://jsonplaceholder.typicode.com/posts/1'
-  ]
-});
-
-console.log('Fetch results:', response.data);
-
-// Get results later
-const results = await axios.get('http://localhost:3000/api/fetch');
-console.log('Last fetch results:', results.data);
-```
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-- `PORT`: Server port (default: 3000)
-
-### Service Configuration
-
-The service has the following built-in limits and settings:
-
-- **Maximum URLs per request**: 50
-- **Maximum redirects**: 5 levels
-- **Request timeout**: 10 seconds
-- **Maximum content length**: 10MB
-- **Content truncation**: 100KB (with truncation notice)
-
-## 🔧 Error Handling
-
-The service handles various error scenarios:
-
-- **Invalid URLs**: Returns 400 Bad Request with specific error message
-- **Network errors**: Captures and reports connection issues
-- **Timeouts**: Handles request timeouts gracefully
-- **Redirect loops**: Prevents infinite redirects with configurable limit
-- **Large content**: Automatically truncates oversized responses
-- **Server errors**: Returns appropriate HTTP status codes
-
-## 📊 Response Fields
-
-Each URL fetch result contains:
-
-- `url`: Original URL requested
-- `status`: HTTP status code
-- `content`: Response content (truncated if necessary)
-- `contentType`: MIME type of the response
-- `contentLength`: Size of the content in bytes
-- `fetchTime`: Time taken to fetch the URL in milliseconds
-- `redirectCount`: Number of redirects followed
-- `finalUrl`: Final URL after all redirects
-- `error`: Error message if fetch failed
-- `timestamp`: When the fetch was completed
-
-## 🏗️ Architecture
-
-The service is built using:
-
-- **NestJS**: Modern Node.js framework
-- **Axios**: HTTP client for URL fetching
-- **Class Validator**: Request validation
-- **Jest**: Testing framework
-- **TypeScript**: Type-safe development
+| Component               | Technology       |
+| ----------------------- | ---------------- |
+| **Framework**     | NestJS           |
+| **Language**      | TypeScript       |
+| **HTTP Client**   | Axios            |
+| **Testing**       | Jest + Supertest |
+| **Documentation** | Swagger/OpenAPI  |
+| **Validation**    | class-validator  |
 
 ### Project Structure
 
 ```
 src/
-├── controllers/          # API controllers
-├── services/            # Business logic services
-├── dto/                 # Data transfer objects
-├── interfaces/          # TypeScript interfaces
-├── app.module.ts        # Main application module
-└── main.ts             # Application entry point
-test/
-└── app.e2e-spec.ts     # End-to-end tests
+├── controllers/           # REST endpoints
+│   ├── url-fetcher.controller.ts
+│   └── health.controller.ts
+├── services/             # Business logic
+│   └── url-fetcher.service.ts
+├── repositories/         # Data access
+│   ├── requests.repository.interface.ts
+│   ├── memory-requests.repository.ts
+│   ├── file-requests.repository.ts
+│   └── repositories.module.ts
+├── dto/                  # Data transfer objects
+│   └── fetch-urls.dto.ts
+├── interfaces/           # TypeScript interfaces
+│   └── url-fetch-result.interface.ts
+├── validators/           # Validation logic
+│   └── url.validator.ts
+└── app.module.ts         # Root module
 ```
 
-## 🚀 Deployment
+**Building for production:**
 
-### Using Docker (Optional)
-
-Create a `Dockerfile`:
-
-```dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY dist ./dist
-
-EXPOSE 3000
-
-CMD ["node", "dist/main"]
+```bash
+npm run build
+npm run start:prod
 ```
 
-### Production Considerations
+### License
 
-1. **Environment Variables**: Set appropriate PORT and other configs
-2. **Logging**: Configure proper logging for production
-3. **Monitoring**: Add monitoring and alerting
-4. **Rate Limiting**: Consider adding rate limiting for production use
-5. **Security**: Review and enhance security measures
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the ISC License.
-
-## 🆘 Support
-
-If you encounter any issues or have questions:
-
-1. Check the [Issues](../../issues) page for existing solutions
-2. Create a new issue with detailed information
-3. Include error messages, request examples, and environment details
-
-## 🔄 Changelog
-
-### Version 1.0.0
-- Initial release
-- Basic URL fetching functionality
-- Redirect handling
-- Comprehensive error handling
-- Full test coverage
-- REST API endpoints
+ISC
