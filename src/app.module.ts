@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { UrlFetcherController } from './controllers/url-fetcher.controller';
 import { HealthController } from './controllers/health.controller';
 import { UrlFetcherService } from './services/url-fetcher.service';
+import { RepositoriesModule } from './repositories/repositories.module';
 
 @Module({
     imports: [
@@ -10,6 +11,7 @@ import { UrlFetcherService } from './services/url-fetcher.service';
             isGlobal: true,
             envFilePath: '.env',
         }),
+        RepositoriesModule,
     ],
     controllers: [UrlFetcherController, HealthController],
     providers: [UrlFetcherService],

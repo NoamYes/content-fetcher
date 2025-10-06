@@ -4,13 +4,17 @@ import * as request from 'supertest';
 import { UrlFetcherController } from './url-fetcher.controller';
 import { UrlFetcherService } from '../services/url-fetcher.service';
 import { ConfigModule } from '@nestjs/config';
+import { RepositoriesModule } from '../repositories/repositories.module';
 
 describe('URL Fetcher E2E', () => {
     let app: INestApplication;
 
     beforeAll(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [ConfigModule.forRoot()],
+            imports: [
+                ConfigModule.forRoot(),
+                RepositoriesModule,
+            ],
             controllers: [UrlFetcherController],
             providers: [UrlFetcherService],
         }).compile();
@@ -65,7 +69,7 @@ describe('URL Fetcher E2E', () => {
 
         // Should have at least our 2 requests (may have more from other tests)
         expect(allResponse.body.length).toBeGreaterThanOrEqual(2);
-        
+
         // But should definitely contain our two request IDs
         const requestIds = allResponse.body.map((r: any) => r.id);
         expect(requestIds).toContain(response1.body.requestId);

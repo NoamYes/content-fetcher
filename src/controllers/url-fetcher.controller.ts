@@ -1,8 +1,9 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus, Logger, Param, Req, HttpCode } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, Logger, Param, Inject, HttpCode } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UrlFetcherService } from '../services/url-fetcher.service';
 import { FetchUrlsDto } from '../dto/fetch-urls.dto';
 import { FetchUrlsResponse, StoredFetchRequest } from '../interfaces/url-fetch-result.interface';
+import { IRequestsRepository } from '../repositories/requests.repository.interface';
 import {
     hasUrls,
     isWithinUrlLimit,
@@ -15,11 +16,11 @@ import {
 @Controller('api/v1/requests')
 export class UrlFetcherController {
     private readonly logger = new Logger(UrlFetcherController.name);
-    private fetchResults: Map<string, StoredFetchRequest> = new Map();
 
     constructor(
         private readonly urlFetcherService: UrlFetcherService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        @Inject('IRequestsRepository') private readonly requestsRepository: IRequestsRepository
     ) { }
 
     @Post()
@@ -43,7 +44,7 @@ export class UrlFetcherController {
                 status: 'completed'
             };
 
-            this.fetchResults.set(result.requestId, storedRequest);
+            await this.requestsRepository.save(storedRequest);
 
             this.logger.log(`Successfully processed ${fetchUrlsDto.urls.length} URLs with request ID: ${result.requestId}`);
             return result;
@@ -68,7 +69,7 @@ export class UrlFetcherController {
 
     @Get(':id')
     async getRequestById(@Param('id') id: string): Promise<StoredFetchRequest> {
-        const storedRequest = this.fetchResults.get(id);
+        const storedRequest = await this.requestsRepository.findById(id);
 
         if (!storedRequest) {
             throw new HttpException(
@@ -86,9 +87,11 @@ export class UrlFetcherController {
 
     @Get()
     async getAllRequests(): Promise<StoredFetchRequest[]> {
-        const requests = Array.from(this.fetchResults.values());
+        const requests = await this.requestsRepository.findAll();
 
-        return requests.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        return requests.sort((a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
     }
 
     private validateUrls(urls: string[]): void {

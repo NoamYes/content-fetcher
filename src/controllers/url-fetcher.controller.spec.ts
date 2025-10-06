@@ -18,6 +18,15 @@ describe('UrlFetcherController', () => {
         get: jest.fn((key: string, defaultValue: any) => defaultValue),
     };
 
+    const mockRequestsRepository = {
+        save: jest.fn(),
+        findById: jest.fn(),
+        findAll: jest.fn(),
+        delete: jest.fn(),
+        clear: jest.fn(),
+        exists: jest.fn(),
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             controllers: [UrlFetcherController],
@@ -29,6 +38,10 @@ describe('UrlFetcherController', () => {
                 {
                     provide: ConfigService,
                     useValue: mockConfigService,
+                },
+                {
+                    provide: 'IRequestsRepository',
+                    useValue: mockRequestsRepository,
                 },
             ],
         }).compile();
@@ -134,7 +147,16 @@ describe('UrlFetcherController', () => {
 
             mockUrlFetcherService.fetchUrls.mockResolvedValue(mockResponse);
 
-            await controller.createFetchRequest(dto);
+            const storedRequest = {
+                id: 'stored-id',
+                urls: dto.urls,
+                result: mockResponse,
+                createdAt: new Date(),
+                status: 'completed' as const,
+            };
+
+            mockRequestsRepository.findById.mockResolvedValue(storedRequest);
+
             const result = await controller.getRequestById('stored-id');
 
             expect(result.id).toBe('stored-id');
@@ -142,6 +164,8 @@ describe('UrlFetcherController', () => {
         });
 
         it('should throw 404 for non-existent request ID', async () => {
+            mockRequestsRepository.findById.mockResolvedValue(null);
+
             try {
                 await controller.getRequestById('non-existent-id');
                 fail('Should have thrown an error');
@@ -154,31 +178,40 @@ describe('UrlFetcherController', () => {
 
     describe('GET /api/v1/requests', () => {
         it('should return all stored fetch results', async () => {
-            const dto1: FetchUrlsDto = { urls: ['http://example1.com'] };
-            const dto2: FetchUrlsDto = { urls: ['http://example2.com'] };
+            const storedRequests = [
+                {
+                    id: 'id-1',
+                    urls: ['http://example1.com'],
+                    result: {
+                        requestId: 'id-1',
+                        results: [],
+                        totalUrls: 1,
+                        successfulFetches: 1,
+                        failedFetches: 0,
+                        totalFetchTime: 150,
+                        timestamp: new Date(),
+                    },
+                    createdAt: new Date(),
+                    status: 'completed' as const,
+                },
+                {
+                    id: 'id-2',
+                    urls: ['http://example2.com'],
+                    result: {
+                        requestId: 'id-2',
+                        results: [],
+                        totalUrls: 1,
+                        successfulFetches: 1,
+                        failedFetches: 0,
+                        totalFetchTime: 150,
+                        timestamp: new Date(),
+                    },
+                    createdAt: new Date(),
+                    status: 'completed' as const,
+                },
+            ];
 
-            mockUrlFetcherService.fetchUrls
-                .mockResolvedValueOnce({
-                    requestId: 'id-1',
-                    results: [],
-                    totalUrls: 1,
-                    successfulFetches: 1,
-                    failedFetches: 0,
-                    totalFetchTime: 150,
-                    timestamp: new Date(),
-                })
-                .mockResolvedValueOnce({
-                    requestId: 'id-2',
-                    results: [],
-                    totalUrls: 1,
-                    successfulFetches: 1,
-                    failedFetches: 0,
-                    totalFetchTime: 150,
-                    timestamp: new Date(),
-                });
-
-            await controller.createFetchRequest(dto1);
-            await controller.createFetchRequest(dto2);
+            mockRequestsRepository.findAll.mockResolvedValue(storedRequests);
 
             const result = await controller.getAllRequests();
 
@@ -188,6 +221,8 @@ describe('UrlFetcherController', () => {
         });
 
         it('should return empty array when no requests exist', async () => {
+            mockRequestsRepository.findAll.mockResolvedValue([]);
+
             const result = await controller.getAllRequests();
 
             expect(result).toEqual([]);
